@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TOEFL Practice Test</title>
+<style>
+  :root{
+    --bg:#F6F7F9; --card:#FFFFFF; --ink:#1C2333; --ink-soft:#5B6478;
+    --line:#E2E5EB; --accent:#3450A3; --accent-soft:#EAEEFA;
+    --danger:#B3432B; --danger-soft:#FBEDE8; --ok:#2C7A57; --ok-soft:#E8F4EE;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6;
+  }
+  .wrap{max-width:720px; margin:0 auto; padding:24px 20px 80px;}
+  .topbar{
+    position:sticky; top:0; background:var(--bg); padding:14px 0; z-index:10;
+    display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line);
+    margin-bottom:24px;
+  }
+  .topbar .label{font-size:13px; color:var(--ink-soft);}
+  .topbar .section-name{font-size:16px; font-weight:600;}
+  .timer{
+    font-variant-numeric:tabular-nums; font-size:15px; font-weight:600;
+    background:var(--accent-soft); color:var(--accent); padding:6px 14px; border-radius:8px;
+  }
+  .timer.warn{background:var(--danger-soft); color:var(--danger);}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:28px 26px; margin-bottom:20px;
+  }
+  h1{font-size:26px; margin:0 0 8px;}
+  h2{font-size:19px; margin:0 0 4px;}
+  h3{font-size:15px; color:var(--ink-soft); font-weight:600; margin:0 0 16px; text-transform:none;}
+  p{margin:0 0 14px;}
+  .muted{color:var(--ink-soft); font-size:14px;}
+  input[type=text]{
+    width:100%; padding:11px 13px; border:1px solid var(--line); border-radius:8px;
+    font-size:15px; margin-bottom:14px; font-family:inherit;
+  }
+  button{
+    font-family:inherit; font-size:14px; cursor:pointer; border-radius:8px; border:1px solid var(--line);
+    background:#fff; padding:10px 18px; color:var(--ink); transition:background .15s;
+  }
+  button:hover{background:#F1F2F5;}
+  button:disabled{opacity:.45; cursor:not-allowed;}
+  .btn-primary{background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600;}
+  .btn-primary:hover{background:#2A4183;}
+  .btn-primary:disabled{background:var(--accent); opacity:.4;}
+  .navrow{display:flex; justify-content:space-between; align-items:center; margin-top:18px;}
+  .audio-box{
+    display:flex; align-items:center; gap:14px; background:var(--accent-soft);
+    border-radius:10px; padding:14px 16px; margin-bottom:20px;
+  }
+  .play-btn{
+    width:42px; height:42px; border-radius:50%; background:var(--accent); border:none;
+    color:#fff; font-size:16px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  }
+  .play-btn:disabled{background:#9AA6C4;}
+  .audio-meta{font-size:13px; color:var(--accent); flex:1;}
+  .audio-progress{height:4px; background:#D3DAF0; border-radius:2px; margin-top:6px; overflow:hidden;}
+  .audio-progress-fill{height:100%; background:var(--accent); width:0%;}
+  .qnum{font-size:13px; color:var(--ink-soft); margin-bottom:6px;}
+  .stem{font-size:16px; margin-bottom:16px;}
+  .choice{
+    display:flex; gap:10px; align-items:flex-start; border:1px solid var(--line); border-radius:9px;
+    padding:12px 14px; margin-bottom:9px; cursor:pointer;
+  }
+  .choice:hover{border-color:#B9C0D6;}
+  .choice.selected{border-color:var(--accent); background:var(--accent-soft);}
+  .choice input{margin-top:3px;}
+  .passage{
+    background:#FBFBFC; border:1px solid var(--line); border-radius:10px; padding:18px 20px;
+    margin-bottom:20px; font-size:15px; max-height:340px; overflow-y:auto;
+  }
+  .passage h4{margin:0 0 10px; font-size:15px;}
+  .palette{display:flex; flex-wrap:wrap; gap:6px; margin-top:18px;}
+  .palette button{
+    width:32px; height:32px; padding:0; font-size:12px; border-radius:6px;
+  }
+  .palette button.answered{background:var(--ok-soft); border-color:var(--ok); color:var(--ok);}
+  .palette button.current{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .instructions{font-size:14px; color:var(--ink-soft); font-style:italic; margin-bottom:18px;}
+  .score-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin:20px 0;}
+  .score-cell{background:var(--accent-soft); border-radius:10px; padding:16px; text-align:center;}
+  .score-cell .num{font-size:26px; font-weight:700; color:var(--accent);}
+  .score-cell .lbl{font-size:12px; color:var(--ink-soft); margin-top:4px;}
+  .warn-box{background:var(--danger-soft); color:var(--danger); border-radius:8px; padding:12px 14px; font-size:13px; margin-top:10px;}
+  .ok-box{background:var(--ok-soft); color:var(--ok); border-radius:8px; padding:12px 14px; font-size:13px; margin-top:10px;}
+  a{color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+/* =========================================================
+   CONFIG — admin: paste your Google Apps Script Web App URL
+   here after deploying it (see SETUP_GUIDE.md). Leave empty
+   to only allow local CSV download of results.
+========================================================= */
+const RESULTS_WEBHOOK_URL = ""; // e.g. "https://script.google.com/macros/s/XXXX/exec"
+
+const SECTION_TIME = { listening: 0, structure: 25*60, reading: 30*60 }; // listening timer follows audio, not clock
+
+/* =========================================================
+   DATA
+========================================================= */
+const partA = [
+ {id:1, audio:"audio/partA_1.mp3", q:"What does the man say about the library?", choices:["It closes earlier than usual","It closes at 9 as always","Its hours have been extended","It is closed during exams"], answer:2},
+ {id:2, audio:"audio/partA_2.mp3", q:"What does the woman mean?", choices:["She hasn't started the report","She needs a lot more time","She is nearly finished","She already submitted it"], answer:2},
+ {id:3, audio:"audio/partA_3.mp3", q:"Where is the registrar's office?", choices:["In the bookstore","On the second floor","Next to the library","On the first floor"], answer:1},
+ {id:4, audio:"audio/partA_4.mp3", q:"What did the woman do?", choices:["She didn't buy her textbooks","She bought new textbooks","She purchased used textbooks online","She borrowed textbooks from a friend"], answer:2},
+ {id:5, audio:"audio/partA_5.mp3", q:"Why can't the man attend the study group?", choices:["He forgot about it","He has to work","He is not interested","He is sick"], answer:1},
+ {id:6, audio:"audio/partA_6.mp3", q:"What does the woman say about the deadline?", choices:["It has been moved earlier","It hasn't changed","It has been extended","It was cancelled"], answer:2},
+ {id:7, audio:"audio/partA_7.mp3", q:"Why did the man miss class?", choices:["He was sick","He forgot about it","He overslept","He had another appointment"], answer:2},
+ {id:8, audio:"audio/partA_8.mp3", q:"What does the woman mean?", choices:["She isn't hungry","She has no time for lunch","She doesn't like lunch dates","She will join him later"], answer:1},
+ {id:9, audio:"audio/partA_9.mp3", q:"What does the man mean?", choices:["The seat is reserved","The woman can sit there","He is waiting for someone","He wants the seat back"], answer:1},
+ {id:10, audio:"audio/partA_10.mp3", q:"What does the woman imply?", choices:["The man has plenty of time","The man should hurry","The library is already closed","The book isn't overdue yet"], answer:1},
+];
+
+const partB = [
+ {group:"Conversation 1", audio:"audio/partB_1.mp3", items:[
+   {id:11, q:"What is Ana's major?", choices:["Statistics","Psychology","Art","Photography"], answer:1},
+   {id:12, q:"What does the advisor recommend?", choices:["Taking two psychology electives","Taking a statistics course and an unrelated elective","Dropping her math requirement","Waiting until next year to choose electives"], answer:1},
+   {id:13, q:"Why does the advisor suggest \"Statistics for Social Sciences\"?", choices:["It has no exams","It doesn't require strong math skills","It is only one credit","It's taught by the psychology department"], answer:1},
+   {id:14, q:"What does Ana decide to do?", choices:["Take two statistics courses","Take statistics and a photography class","Postpone choosing her electives","Change her major"], answer:1},
+ ]},
+ {group:"Conversation 2", audio:"audio/partB_2.mp3", items:[
+   {id:15, q:"What is Lisa struggling with?", choices:["Writing the introduction","The data analysis section","Formatting the slides","Finding a meeting place"], answer:1},
+   {id:16, q:"What does Tom offer to do?", choices:["Write the introduction","Help with the data analysis","Cancel the meeting","Present alone"], answer:1},
+   {id:17, q:"When will Tom be free to meet?", choices:["Before 3 PM","After 3 PM","In the morning","On the weekend"], answer:1},
+   {id:18, q:"Where will they meet?", choices:["In Tom's dorm","At the library","In a classroom","At Lisa's house"], answer:1},
+ ]},
+];
+
+const partC = [
+ {group:"Talk 1", audio:"audio/partC_1.mp3", items:[
+   {id:19, q:"What is the main topic of the talk?", choices:["How to study more effectively","The relationship between sleep and memory","The dangers of all-nighters","How the brain processes information during the day"], answer:1},
+   {id:20, q:"According to the talk, what happens during deep sleep?", choices:["The brain stops working","Memories are erased","The brain strengthens connections formed during the day","Students forget what they studied"], answer:2},
+   {id:21, q:"What does the speaker say about sleep quality versus quantity?", choices:["Only quantity matters","Only quality matters","Both matter, but quality is more effective for consolidation","Neither matters much"], answer:2},
+   {id:22, q:"What does the speaker suggest students do before an exam?", choices:["Study all night","Get a good night's sleep","Skip studying entirely","Take a nap during the day"], answer:1},
+ ]},
+ {group:"Talk 2", audio:"audio/partC_2.mp3", items:[
+   {id:23, q:"What is the talk mainly about?", choices:["A new dining hall menu","The university's recycling program","A change in dormitory rules","A fundraising event"], answer:1},
+   {id:24, q:"Where will recycling bins be placed?", choices:["Only in dormitories","Only in the library","In every building on campus","Only outdoors"], answer:2},
+   {id:25, q:"What does the Green Campus Committee do?", choices:["Organizes campus tours","Manages student housing","Meets every other Thursday to work on the recycling initiative","Sells recycled products"], answer:2},
+   {id:26, q:"What is the university's goal?", choices:["To build a new recycling plant","To reduce landfill waste by thirty percent in two years","To ban plastic on campus","To open a recycling store"], answer:1},
+ ]},
+];
+
+const structureA = [
+ {id:27, q:"_____ she was tired, she decided to finish her homework before going to bed.", choices:["Despite","Although","Because of","Unless"], answer:1},
+ {id:28, q:"The committee has not yet decided _____ to approve the new policy.", choices:["that","if","whether","what"], answer:2},
+ {id:29, q:"By the time the movie started, we _____ our seats for over an hour.", choices:["had","have had","had had","has had"], answer:2},
+ {id:30, q:"Neither the students nor the teacher _____ aware of the schedule change.", choices:["were","was","are","is"], answer:1},
+ {id:31, q:"The report, _____ was submitted late, contained several errors.", choices:["which","who","whom","whose"], answer:0},
+ {id:32, q:"It is essential that every student _____ the safety rules before entering the lab.", choices:["follows","followed","follow","following"], answer:2},
+ {id:33, q:"_____ the heavy rain, the outdoor event was cancelled.", choices:["Because","Due to","Even though","Since"], answer:1},
+ {id:34, q:"The number of students who apply to this university _____ increased steadily over the past decade.", choices:["have","has","had","having"], answer:1},
+ {id:35, q:"She is one of the few students who _____ finished the assignment early.", choices:["has","have","is","was"], answer:1},
+ {id:36, q:"_____ hard he tried, he could not solve the last problem on the exam.", choices:["Howsoever","However","Whatever","No matter"], answer:1},
+ {id:37, q:"The professor asked the students _____ their essays before the deadline.", choices:["submit","submitted","to submit","submitting"], answer:2},
+ {id:38, q:"_____ of the two theories, the second one is more widely accepted.", choices:["Both","Between","Each","All"], answer:1},
+ {id:39, q:"Not only _____ the exam difficult, but the room was also too cold.", choices:["was","is","the exam was","it was"], answer:0},
+ {id:40, q:"The data _____ collected over three years, shows a clear trend.", choices:["which","that has been","whom","what"], answer:1},
+ {id:41, q:"Had the university invested in better facilities, more students _____ have enrolled.", choices:["will","would","can","shall"], answer:1},
+];
+
+const structureB = [
+ {id:42, q:"The teacher, along with her students, (A) were (B) preparing for (C) the annual science fair (D) next week.", choices:["(A) were","(B) preparing for","(C) the annual science fair","(D) next week"], answer:0},
+ {id:43, q:"Each of the applicants (A) have submitted (B) their resume (C) and cover letter (D) by the deadline.", choices:["(A) have submitted","(B) their resume","(C) and cover letter","(D) by the deadline"], answer:0},
+ {id:44, q:"The research team (A) concluded that (B) the results were (C) more significant than (D) they had originally expect.", choices:["(A) concluded that","(B) the results were","(C) more significant than","(D) they had originally expect"], answer:3},
+ {id:45, q:"Despite of (A) the difficulties, (B) the students managed to (C) complete the project (D) on time.", choices:["Despite of (A)","(B) the students managed to","(C) complete the project","(D) on time"], answer:0},
+ {id:46, q:"She is the only one of the students (A) who (B) always arrive (C) early to (D) class.", choices:["(A) who","(B) always arrive","(C) early to","(D) class"], answer:1},
+ {id:47, q:"The company has (A) recently announce that (B) it will be (C) hiring more employees (D) next year.", choices:["(A) recently announce that","(B) it will be","(C) hiring more employees","(D) next year"], answer:0},
+ {id:48, q:"Scientists believe (A) that the new vaccine (B) are more effective (C) than the previous one (D) developed last year.", choices:["(A) that the new vaccine","(B) are more effective","(C) than the previous one","(D) developed last year"], answer:1},
+ {id:49, q:"By the time she (A) arrives at the airport, (B) the plane will already (C) has departed (D) for its destination.", choices:["(A) arrives at the airport","(B) the plane will already","(C) has departed","(D) for its destination"], answer:2},
+ {id:50, q:"The number of students (A) enrolling in online courses (B) have risen dramatically (C) over the last few years (D) due to convenience.", choices:["(A) enrolling in online courses","(B) have risen dramatically","(C) over the last few years","(D) due to convenience"], answer:1},
+ {id:51, q:"If I (A) would have known about the meeting, (B) I would have (C) attended it (D) without hesitation.", choices:["(A) would have known about the meeting","(B) I would have","(C) attended it","(D) without hesitation"], answer:0},
+ {id:52, q:"The professor requested that (A) each student (B) turns in (C) their assignment (D) before the end of class.", choices:["(A) each student","(B) turns in","(C) their assignment","(D) before the end of class"], answer:1},
+ {id:53, q:"Neither of the two proposals (A) were (B) approved by (C) the board of (D) directors.", choices:["(A) were","(B) approved by","(C) the board of","(D) directors"], answer:0},
+ {id:54, q:"The library, (A) which contain (B) over a million books, (C) is one of the (D) largest in the country.", choices:["(A) which contain","(B) over a million books","(C) is one of the","(D) largest in the country"], answer:0},
+ {id:55, q:"Having finish (A) the report, (B) the manager (C) submitted it (D) to the director immediately.", choices:["Having finish (A)","(B) the manager","(C) submitted it","(D) to the director immediately"], answer:0},
+ {id:56, q:"The students were exciting (A) about the field trip (B) planned for (C) next month (D) by the department.", choices:["exciting (A)","(B) planned for","(C) next month","(D) by the department"], answer:0},
+];
+
+const readingPassages = [
+ {title:"The Vital Role of Honeybees", text:`Honeybees are often celebrated for producing honey, but their most important contribution to agriculture is pollination. As bees move from flower to flower collecting nectar, pollen grains stick to their bodies and are transferred between plants, enabling fertilization. It is estimated that roughly one-third of the food humans consume depends, at least in part, on pollinators like bees. Crops such as almonds, apples, and blueberries rely almost entirely on bee pollination to produce fruit. In recent decades, beekeepers have reported alarming declines in honeybee populations, a phenomenon partly attributed to a problem known as colony collapse disorder. Scientists point to several possible causes, including pesticide exposure, habitat loss, and parasites such as the Varroa mite. Because commercial agriculture depends heavily on managed honeybee colonies, many farmers now rent hives from beekeepers during pollination season, transporting them across the country to align with blooming schedules. Researchers and policymakers continue to search for ways to protect bee populations, recognizing that their decline could have serious consequences not just for beekeepers, but for global food security as a whole.`,
+  items:[
+   {id:57, q:"What is the passage mainly about?", choices:["How honey is produced","The importance of bees for pollination","The dangers of pesticides","How to become a beekeeper"], answer:1},
+   {id:58, q:"According to the passage, what percentage of human food depends on pollinators?", choices:["About one-tenth","About one-third","About one-half","Nearly all"], answer:1},
+   {id:59, q:"Which crops are mentioned as depending almost entirely on bee pollination?", choices:["Wheat and rice","Corn and soybeans","Almonds, apples, and blueberries","Potatoes and carrots"], answer:2},
+   {id:60, q:"What is \"colony collapse disorder\"?", choices:["A type of pesticide","A decline in honeybee populations","A farming technique","A disease in humans"], answer:1},
+   {id:61, q:"According to the passage, why do farmers rent hives from beekeepers?", choices:["To produce more honey","To help pollinate their crops","To study bee behavior","To reduce pesticide use"], answer:1},
+   {id:62, q:"The word \"alarming\" in the passage is closest in meaning to", choices:["surprising and pleasant","worrying","unimportant","expected"], answer:1},
+   {id:63, q:"What can be inferred about the future of bee populations?", choices:["It is not a concern for scientists","It could affect global food security","It has no impact on agriculture","It has already been fully resolved"], answer:1},
+  ]},
+ {title:"The Printing Press and the Spread of Knowledge", text:`Before the mid-fifteenth century, books in Europe were copied by hand, a slow and expensive process that limited the spread of information to a small, literate elite. This changed dramatically around 1440, when Johannes Gutenberg developed a printing press using movable metal type. Gutenberg's invention allowed individual letters to be arranged, inked, and pressed onto paper repeatedly, making it possible to produce many copies of a text far more quickly than by hand. Within decades, printing presses spread across Europe, and the cost of books dropped significantly. This had profound effects on society. Ideas could now travel faster and reach a wider audience, contributing to increased literacy rates and the spread of new philosophical and scientific ideas during the Renaissance. Some historians argue that the printing press also played a key role in the Protestant Reformation, since it allowed reformers like Martin Luther to distribute pamphlets criticizing the Catholic Church far more widely than would have been possible before. In many ways, Gutenberg's invention set the stage for the modern information age, demonstrating how a single technological innovation can reshape an entire society.`,
+  items:[
+   {id:64, q:"What is the main idea of the passage?", choices:["Johannes Gutenberg was a famous author","The printing press transformed the spread of information in Europe","Books were always cheap to produce","The Protestant Reformation caused the invention of printing"], answer:1},
+   {id:65, q:"Before the printing press, how were books produced?", choices:["By machine","By hand","By using wood blocks only","They were not produced at all"], answer:1},
+   {id:66, q:"What did Gutenberg's invention allow?", choices:["Faster production of many copies of a text","The invention of paper","The translation of the Bible","The abolition of handwriting"], answer:0},
+   {id:67, q:"According to the passage, what effect did cheaper books have on society?", choices:["Fewer people learned to read","Literacy rates increased","Books became rare","Handwriting became more popular"], answer:1},
+   {id:68, q:"What role did the printing press play in the Protestant Reformation, according to some historians?", choices:["It had no role at all","It helped distribute reform pamphlets widely","It was invented by Martin Luther","It was banned by reformers"], answer:1},
+   {id:69, q:"The word \"profound\" in the passage is closest in meaning to", choices:["minor","significant","confusing","temporary"], answer:1},
+   {id:70, q:"What does the passage suggest about technological innovation?", choices:["It rarely affects society","It can reshape an entire society","It only affects the economy","It is always resisted by the public"], answer:1},
+  ]},
+ {title:"Urban Heat Islands", text:`Cities are often noticeably warmer than the rural areas surrounding them, a phenomenon known as the urban heat island effect. This occurs because materials commonly used in cities, such as asphalt and concrete, absorb and retain heat more effectively than natural surfaces like grass and trees. During the day, these materials absorb solar radiation, and at night, they slowly release the stored heat back into the air, keeping urban temperatures elevated even after sunset. Additionally, tall buildings can trap heat and reduce airflow, while the widespread use of air conditioning and vehicles adds even more heat to the surrounding environment. The urban heat island effect can raise city temperatures by several degrees compared to nearby rural areas, leading to increased energy consumption for cooling and, in extreme cases, greater risks to public health during heat waves. To reduce this effect, urban planners have proposed several strategies, including increasing green spaces, planting more trees, and using reflective or light-colored materials on roofs and roads that absorb less heat. Some cities have already begun implementing "green roofs," covering buildings with vegetation to both cool the structure and reduce overall urban temperatures.`,
+  items:[
+   {id:71, q:"What is the urban heat island effect?", choices:["A rise in ocean temperatures","Cities being warmer than surrounding rural areas","A type of pollution","A weather pattern only found at night"], answer:1},
+   {id:72, q:"According to the passage, why do cities retain more heat?", choices:["Because of the materials used, such as asphalt and concrete","Because they are located near the ocean","Because they have more trees","Because of higher altitude"], answer:0},
+   {id:73, q:"What happens to the heat absorbed by city materials during the day?", choices:["It disappears immediately","It is released slowly at night","It is absorbed by trees","It causes immediate cooling"], answer:1},
+   {id:74, q:"According to the passage, what contributes to the heat island effect besides building materials?", choices:["Ocean currents","Air conditioning and vehicles","Rainfall patterns","Wind speed"], answer:1},
+   {id:75, q:"What is one consequence of the urban heat island effect mentioned in the passage?", choices:["Decreased energy use","Increased energy consumption for cooling","Lower temperatures at night","Reduced traffic"], answer:1},
+   {id:76, q:"What is a \"green roof,\" according to the passage?", choices:["A roof painted green","A roof covered with vegetation","A type of solar panel","A roof made of recycled plastic"], answer:1},
+   {id:77, q:"The word \"elevated\" in the passage is closest in meaning to", choices:["lowered","raised","removed","stabilized"], answer:1},
+  ]},
+];
+
+/* =========================================================
+   BUILD FLAT ITEM LIST
+========================================================= */
+let items = [];
+partA.forEach(it => items.push({section:"Listening", part:"Part A — Short Conversations", audio:it.audio, group:null, id:it.id, q:it.q, choices:it.choices, answer:it.answer}));
+partB.forEach(g => g.items.forEach((it,i) => items.push({section:"Listening", part:"Part B — "+g.group, audio: i===0? g.audio : null, groupAudio:g.audio, id:it.id, q:it.q, choices:it.choices, answer:it.answer})));
+partC.forEach(g => g.items.forEach((it,i) => items.push({section:"Listening", part:"Part C — "+g.group, audio: i===0? g.audio : null, groupAudio:g.audio, id:it.id, q:it.q, choices:it.choices, answer:it.answer})));
+structureA.forEach(it => items.push({section:"Structure", part:"Part A — Sentence Completion", id:it.id, q:it.q, choices:it.choices, answer:it.answer}));
+structureB.forEach(it => items.push({section:"Structure", part:"Part B — Error Identification", id:it.id, q:it.q, choices:it.choices, answer:it.answer, isError:true}));
+readingPassages.forEach((p) => p.items.forEach(it => items.push({section:"Reading", part:p.title, passage:p.text, passageTitle:p.title, id:it.id, q:it.q, choices:it.choices, answer:it.answer})));
+
+/* =========================================================
+   STATE
+========================================================= */
+let state = {
+  screen: "start",
+  participant: {name:"", id:""},
+  idx: 0,
+  answers: {},
+  playedAudio: {},
+  sectionStart: {},
+  timers: {},
+};
+
+const app = document.getElementById("app");
+
+function fmtTime(s){
+  s = Math.max(0, Math.round(s));
+  const m = Math.floor(s/60), sec = s%60;
+  return m+":"+String(sec).padStart(2,"0");
+}
+
+function currentSection(){ return items[state.idx] ? items[state.idx].section : null; }
+
+function sectionIndices(sec){
+  return items.map((it,i)=>({it,i})).filter(x=>x.it.section===sec).map(x=>x.i);
+}
+
+/* =========================================================
+   RENDER: START SCREEN
+========================================================= */
+function renderStart(){
+  app.innerHTML = `
+    <div class="card">
+      <h1>TOEFL Practice Test</h1>
+      <p class="muted">Listening Comprehension • Structure and Written Expression • Reading Comprehension</p>
+      <p>Tes ini terdiri dari 3 bagian: Listening (26 soal), Structure (30 soal), dan Reading (21 soal). Audio listening hanya dapat diputar satu kali. Pastikan koneksi internet stabil dan gunakan headphone untuk bagian listening.</p>
+      <label for="pname" style="font-size:14px; font-weight:600;">Nama lengkap</label>
+      <input type="text" id="pname" placeholder="Nama sesuai KTP/kartu peserta">
+      <label for="pid" style="font-size:14px; font-weight:600;">Nomor peserta / NIM</label>
+      <input type="text" id="pid" placeholder="Nomor peserta">
+      <div id="startErr" class="warn-box" style="display:none;">Isi nama dan nomor peserta terlebih dahulu.</div>
+      <div class="navrow" style="justify-content:flex-end;">
+        <button class="btn-primary" id="startBtn">Mulai tes →</button>
+      </div>
+    </div>
+  `;
+  document.getElementById("startBtn").onclick = () => {
+    const name = document.getElementById("pname").value.trim();
+    const id = document.getElementById("pid").value.trim();
+    if(!name || !id){ document.getElementById("startErr").style.display="block"; return; }
+    state.participant = {name, id};
+    state.screen = "test";
+    state.idx = 0;
+    state.sectionStart[currentSection()] = Date.now();
+    render();
+  };
+}
+
+/* =========================================================
+   AUDIO PLAYER COMPONENT
+========================================================= */
+let audioEl = null;
+function renderAudioBox(src, key){
+  const played = !!state.playedAudio[key];
+  return `
+    <div class="audio-box">
+      <button class="play-btn" id="playBtn" ${played?"disabled":""}>${played?'<i>✓</i>':'▶'}</button>
+      <div style="flex:1;">
+        <div class="audio-meta">${played ? "Audio telah diputar — tidak dapat diulang" : "Klik untuk memutar audio (hanya 1 kali)"}</div>
+        <div class="audio-progress"><div class="audio-progress-fill" id="audioFill"></div></div>
+      </div>
+    </div>
+  `;
+}
+function wireAudio(src, key){
+  const btn = document.getElementById("playBtn");
+  const fill = document.getElementById("audioFill");
+  if(!btn || state.playedAudio[key]) return;
+  btn.onclick = () => {
+    if(audioEl){ audioEl.pause(); }
+    audioEl = new Audio(src);
+    btn.disabled = true;
+    audioEl.play();
+    audioEl.ontimeupdate = () => {
+      if(audioEl.duration) fill.style.width = (audioEl.currentTime/audioEl.duration*100)+"%";
+    };
+    audioEl.onended = () => {
+      state.playedAudio[key] = true;
+      fill.style.width = "100%";
+      renderQuestion();
+    };
+  };
+}
+
+/* =========================================================
+   RENDER: TEST QUESTION
+========================================================= */
+function renderQuestion(){
+  const it = items[state.idx];
+  const sec = it.section;
+  const secIdxs = sectionIndices(sec);
+  const posInSec = secIdxs.indexOf(state.idx)+1;
+
+  let timerHtml = "";
+  if(sec !== "Listening"){
+    const total = SECTION_TIME[sec.toLowerCase()];
+    const elapsed = (Date.now() - state.sectionStart[sec])/1000;
+    const remain = total - elapsed;
+    const warn = remain < 120;
+    timerHtml = `<div class="timer ${warn?'warn':''}" id="timerDisplay">${fmtTime(remain)}</div>`;
+  } else {
+    timerHtml = `<div class="timer">Soal ${posInSec} / ${secIdxs.length}</div>`;
+  }
+
+  let audioHtml = "";
+  const audioKey = it.groupAudio || it.audio;
+  if(it.audio && !it.groupAudio){
+    audioHtml = renderAudioBox(it.audio, "single_"+it.id);
+  } else if(it.groupAudio){
+    audioHtml = renderAudioBox(it.groupAudio, "group_"+it.part);
+  }
+
+  let passageHtml = "";
+  if(it.passage){
+    passageHtml = `<div class="passage"><h4>${it.passageTitle}</h4><div>${it.passage}</div></div>`;
+  }
+
+  const selected = state.answers[it.id];
+  const choicesHtml = it.choices.map((c,i)=>`
+    <label class="choice ${selected===i?'selected':''}">
+      <input type="radio" name="choice" value="${i}" ${selected===i?"checked":""}>
+      <span>${String.fromCharCode(65+i)}. ${c}</span>
+    </label>
+  `).join("");
+
+  const isLastOverall = state.idx === items.length-1;
+  const canReplay = it.audio || it.groupAudio;
+  const audioBlocking = false; // navigation not blocked by audio, matches practical use
+
+  app.innerHTML = `
+    <div class="topbar">
+      <div><div class="label">${it.section}</div><div class="section-name">${it.part}</div></div>
+      ${timerHtml}
+    </div>
+    <div class="card">
+      ${passageHtml}
+      ${audioHtml}
+      <div class="qnum">Soal No. ${it.id}</div>
+      <div class="stem">${it.q}</div>
+      <div id="choicesWrap">${choicesHtml}</div>
+    </div>
+    <div class="navrow">
+      <button id="prevBtn" ${state.idx===0?"disabled":""}>← Sebelumnya</button>
+      <button class="btn-primary" id="nextBtn">${isLastOverall ? "Selesai & kirim" : "Selanjutnya →"}</button>
+    </div>
+    <div class="palette">
+      ${secIdxs.map(i => `<button data-jump="${i}" class="${i===state.idx?'current':(state.answers[items[i].id]!==undefined?'answered':'')}">${items[i].id}</button>`).join("")}
+    </div>
+  `;
+
+  if(audioKey) wireAudio(it.audio || it.groupAudio, it.groupAudio ? "group_"+it.part : "single_"+it.id);
+
+  document.querySelectorAll('input[name="choice"]').forEach(radio=>{
+    radio.onchange = (e)=>{
+      state.answers[it.id] = parseInt(e.target.value);
+      document.querySelectorAll(".choice").forEach(c=>c.classList.remove("selected"));
+      e.target.closest(".choice").classList.add("selected");
+    };
+  });
+
+  document.getElementById("prevBtn").onclick = ()=>{ if(state.idx>0){ state.idx--; render(); } };
+  document.getElementById("nextBtn").onclick = ()=>{
+    const nextIdx = state.idx+1;
+    if(nextIdx < items.length){
+      const nextSec = items[nextIdx].section;
+      if(nextSec !== sec){
+        state.sectionStart[nextSec] = Date.now();
+      }
+      state.idx = nextIdx;
+      render();
+    } else {
+      finishTest();
+    }
+  };
+  document.querySelectorAll("[data-jump]").forEach(b=>{
+    b.onclick = ()=>{ state.idx = parseInt(b.dataset.jump); render(); };
+  });
+
+  if(sec !== "Listening"){
+    startSectionTimerTick(sec);
+  }
+}
+
+let tickInterval = null;
+function startSectionTimerTick(sec){
+  if(tickInterval) clearInterval(tickInterval);
+  tickInterval = setInterval(()=>{
+    const total = SECTION_TIME[sec.toLowerCase()];
+    const elapsed = (Date.now() - state.sectionStart[sec])/1000;
+    const remain = total - elapsed;
+    const disp = document.getElementById("timerDisplay");
+    if(disp){
+      disp.textContent = fmtTime(remain);
+      if(remain < 120) disp.classList.add("warn");
+    }
+    if(remain <= 0){
+      clearInterval(tickInterval);
+      advanceToNextSectionOrFinish(sec);
+    }
+  }, 1000);
+}
+function advanceToNextSectionOrFinish(sec){
+  const secIdxs = sectionIndices(sec);
+  const lastIdxOfSec = secIdxs[secIdxs.length-1];
+  if(lastIdxOfSec === items.length-1){
+    finishTest();
+  } else {
+    state.idx = lastIdxOfSec+1;
+    state.sectionStart[items[state.idx].section] = Date.now();
+    render();
+  }
+}
+
+/* =========================================================
+   SCORING + FINISH
+========================================================= */
+function computeScore(){
+  const bySec = {Listening:{correct:0,total:0}, Structure:{correct:0,total:0}, Reading:{correct:0,total:0}};
+  items.forEach(it=>{
+    bySec[it.section].total++;
+    if(state.answers[it.id] === it.answer) bySec[it.section].correct++;
+  });
+  return bySec;
+}
+
+async function finishTest(){
+  if(tickInterval) clearInterval(tickInterval);
+  state.screen = "done";
+  const scores = computeScore();
+  const total = scores.Listening.correct + scores.Structure.correct + scores.Reading.correct;
+  const totalQ = items.length;
+
+  const payload = {
+    name: state.participant.name,
+    participantId: state.participant.id,
+    timestamp: new Date().toISOString(),
+    listeningScore: scores.Listening.correct, listeningTotal: scores.Listening.total,
+    structureScore: scores.Structure.correct, structureTotal: scores.Structure.total,
+    readingScore: scores.Reading.correct, readingTotal: scores.Reading.total,
+    totalScore: total, totalQuestions: totalQ,
+    answers: state.answers,
+  };
+
+  let sent = false;
+  if(RESULTS_WEBHOOK_URL){
+    try{
+      await fetch(RESULTS_WEBHOOK_URL, {
+        method:"POST", mode:"no-cors",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+      });
+      sent = true;
+    } catch(e){ sent = false; }
+  }
+
+  app.innerHTML = `
+    <div class="card">
+      <h1>Tes selesai</h1>
+      <p class="muted">${state.participant.name} • ${state.participant.id}</p>
+      <div class="score-grid">
+        <div class="score-cell"><div class="num">${scores.Listening.correct}/${scores.Listening.total}</div><div class="lbl">Listening</div></div>
+        <div class="score-cell"><div class="num">${scores.Structure.correct}/${scores.Structure.total}</div><div class="lbl">Structure</div></div>
+        <div class="score-cell"><div class="num">${scores.Reading.correct}/${scores.Reading.total}</div><div class="lbl">Reading</div></div>
+      </div>
+      <p style="text-align:center; font-size:18px; font-weight:700;">Total: ${total} / ${totalQ}</p>
+      ${RESULTS_WEBHOOK_URL
+        ? (sent ? `<div class="ok-box">Hasil berhasil dikirim ke sistem penyelenggara.</div>`
+                : `<div class="warn-box">Gagal mengirim hasil otomatis. Silakan unduh hasil di bawah dan kirimkan manual ke penyelenggara.</div>`)
+        : `<div class="warn-box">Pengiriman otomatis belum diaktifkan oleh penyelenggara. Silakan unduh hasil di bawah dan kirimkan ke penyelenggara.</div>`
+      }
+      <div class="navrow" style="justify-content:center; margin-top:20px;">
+        <button class="btn-primary" id="downloadBtn">Unduh hasil (JSON)</button>
+      </div>
+    </div>
+  `;
+  document.getElementById("downloadBtn").onclick = ()=>{
+    const blob = new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `toefl_result_${state.participant.id}.json`;
+    a.click();
+  };
+}
+
+/* =========================================================
+   MAIN RENDER DISPATCH
+========================================================= */
+function render(){
+  if(state.screen === "start") renderStart();
+  else if(state.screen === "test") renderQuestion();
+}
+
+render();
+</script>
+</body>
+</html>
