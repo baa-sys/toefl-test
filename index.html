@@ -16,7 +16,7 @@
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     line-height:1.6;
   }
-  .wrap{max-width:720px; margin:0 auto; padding:24px 20px 80px;}
+  .wrap{max-width:760px; margin:0 auto; padding:24px 20px 80px;}
   .topbar{
     position:sticky; top:0; background:var(--bg); padding:14px 0; z-index:10;
     display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line);
@@ -35,7 +35,7 @@
   }
   h1{font-size:26px; margin:0 0 8px;}
   h2{font-size:19px; margin:0 0 4px;}
-  h3{font-size:15px; color:var(--ink-soft); font-weight:600; margin:0 0 16px; text-transform:none;}
+  h3{font-size:15px; color:var(--ink-soft); font-weight:600; margin:0 0 16px;}
   p{margin:0 0 14px;}
   .muted{color:var(--ink-soft); font-size:14px;}
   input[type=text]{
@@ -54,16 +54,17 @@
   .navrow{display:flex; justify-content:space-between; align-items:center; margin-top:18px;}
   .audio-box{
     display:flex; align-items:center; gap:14px; background:var(--accent-soft);
-    border-radius:10px; padding:14px 16px; margin-bottom:20px;
+    border-radius:10px; padding:16px 18px; margin-bottom:20px;
   }
   .play-btn{
-    width:42px; height:42px; border-radius:50%; background:var(--accent); border:none;
-    color:#fff; font-size:16px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    width:48px; height:48px; border-radius:50%; background:var(--accent); border:none;
+    color:#fff; font-size:18px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
   }
   .play-btn:disabled{background:#9AA6C4;}
   .audio-meta{font-size:13px; color:var(--accent); flex:1;}
-  .audio-progress{height:4px; background:#D3DAF0; border-radius:2px; margin-top:6px; overflow:hidden;}
-  .audio-progress-fill{height:100%; background:var(--accent); width:0%;}
+  .audio-progress{height:5px; background:#D3DAF0; border-radius:2px; margin-top:8px; overflow:hidden;}
+  .audio-progress-fill{height:100%; background:var(--accent); width:0%; transition:width .2s linear;}
+  .audio-time{font-size:12px; color:var(--accent); margin-top:4px; font-variant-numeric:tabular-nums;}
   .qnum{font-size:13px; color:var(--ink-soft); margin-bottom:6px;}
   .stem{font-size:16px; margin-bottom:16px;}
   .choice{
@@ -79,18 +80,20 @@
   }
   .passage h4{margin:0 0 10px; font-size:15px;}
   .palette{display:flex; flex-wrap:wrap; gap:6px; margin-top:18px;}
-  .palette button{
-    width:32px; height:32px; padding:0; font-size:12px; border-radius:6px;
-  }
+  .palette button{width:32px; height:32px; padding:0; font-size:12px; border-radius:6px;}
   .palette button.answered{background:var(--ok-soft); border-color:var(--ok); color:var(--ok);}
   .palette button.current{background:var(--accent); color:#fff; border-color:var(--accent);}
   .instructions{font-size:14px; color:var(--ink-soft); font-style:italic; margin-bottom:18px;}
   .score-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin:20px 0;}
   .score-cell{background:var(--accent-soft); border-radius:10px; padding:16px; text-align:center;}
-  .score-cell .num{font-size:26px; font-weight:700; color:var(--accent);}
+  .score-cell .num{font-size:24px; font-weight:700; color:var(--accent);}
   .score-cell .lbl{font-size:12px; color:var(--ink-soft); margin-top:4px;}
   .warn-box{background:var(--danger-soft); color:var(--danger); border-radius:8px; padding:12px 14px; font-size:13px; margin-top:10px;}
   .ok-box{background:var(--ok-soft); color:var(--ok); border-radius:8px; padding:12px 14px; font-size:13px; margin-top:10px;}
+  .listen-item{border-top:1px solid var(--line); padding:16px 0;}
+  .listen-item:first-child{border-top:none; padding-top:0;}
+  .listen-part-label{font-size:12px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.03em; margin:22px 0 4px;}
+  .listen-part-label:first-child{margin-top:0;}
   a{color:var(--accent);}
 </style>
 </head>
@@ -99,138 +102,130 @@
 
 <script>
 /* =========================================================
-   CONFIG — admin: paste your Google Apps Script Web App URL
-   here after deploying it (see SETUP_GUIDE.md). Leave empty
-   to only allow local CSV download of results.
+   CONFIG
 ========================================================= */
 const RESULTS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxvnPReGHOx2g2OJWSejj-1NA1pKmPYR_1OGs5_bD0WOSqSx1CtK3b-qW_wtRtY7BlY/exec";
-
-const SECTION_TIME = { listening: 0, structure: 25*60, reading: 30*60 }; // listening timer follows audio, not clock
+const SECTION_TIME = { structure: 35*60, reading: 25*60 };
+const LISTENING_AUDIO = "audio/listening_practice.mp3";
 
 /* =========================================================
-   DATA
+   DATA — LISTENING (18 items, single continuous audio)
 ========================================================= */
-const partA = [
- {id:1, audio:"audio/partA_1.mp3", q:"What does the man say about the library?", choices:["It closes earlier than usual","It closes at 9 as always","Its hours have been extended","It is closed during exams"], answer:2},
- {id:2, audio:"audio/partA_2.mp3", q:"What does the woman mean?", choices:["She hasn't started the report","She needs a lot more time","She is nearly finished","She already submitted it"], answer:2},
- {id:3, audio:"audio/partA_3.mp3", q:"Where is the registrar's office?", choices:["In the bookstore","On the second floor","Next to the library","On the first floor"], answer:1},
- {id:4, audio:"audio/partA_4.mp3", q:"What did the woman do?", choices:["She didn't buy her textbooks","She bought new textbooks","She purchased used textbooks online","She borrowed textbooks from a friend"], answer:2},
- {id:5, audio:"audio/partA_5.mp3", q:"Why can't the man attend the study group?", choices:["He forgot about it","He has to work","He is not interested","He is sick"], answer:1},
- {id:6, audio:"audio/partA_6.mp3", q:"What does the woman say about the deadline?", choices:["It has been moved earlier","It hasn't changed","It has been extended","It was cancelled"], answer:2},
- {id:7, audio:"audio/partA_7.mp3", q:"Why did the man miss class?", choices:["He was sick","He forgot about it","He overslept","He had another appointment"], answer:2},
- {id:8, audio:"audio/partA_8.mp3", q:"What does the woman mean?", choices:["She isn't hungry","She has no time for lunch","She doesn't like lunch dates","She will join him later"], answer:1},
- {id:9, audio:"audio/partA_9.mp3", q:"What does the man mean?", choices:["The seat is reserved","The woman can sit there","He is waiting for someone","He wants the seat back"], answer:1},
- {id:10, audio:"audio/partA_10.mp3", q:"What does the woman imply?", choices:["The man has plenty of time","The man should hurry","The library is already closed","The book isn't overdue yet"], answer:1},
+const listeningItems = [
+ {id:1, part:"Part A", choices:["He knew that cherries were pricier than.","He bought cherries and grapes because of not knowing their prices.","He didn't know that cherries were pricier than grapes.","He didn't buy either grapes or cherries because both were pricy."], answer:2},
+ {id:2, part:"Part A", choices:["She felt it wasn't fair.","She was in rage.","She felt inferior.","She wasn't furious."], answer:1},
+ {id:3, part:"Part A", choices:["He is unhappy at the thought of retiring.","He hates to leave his job soon.","He is retiring too fast.","He is eager to leave his job."], answer:3},
+ {id:4, part:"Part A", choices:["The rent was given by her for Tom.","She was asked money for paying the rent.","Tom gave her money for the rent.","The money was lent by Tom early this month."], answer:2},
+ {id:5, part:"Part A", choices:["She shouldn't leave her purse here.","She's probably in the apartment.","Her purse must not be in the apartment.","She left the apartment without taking her purse."], answer:1},
+ {id:6, part:"Part A", choices:["Chuck looked at him in the hospital.","Chuck didn't seem to be doing very well.","This visit was better than the last.","Chuck had improved."], answer:3},
+ {id:7, part:"Part A", choices:["She didn't think that he'd do the dishes.","The plates did not need to be washed.","She asked him to be ready to go.","The dishes would not be done."], answer:0},
+ {id:8, part:"Part A", choices:["Professor described the lesson for his class.","There was a long line to register for the required class.","Professor's requirement for the course is high.","Professor required the class to outline his course."], answer:0},
+ {id:9, part:"Part A", choices:["She's shopping for a carpet.","She needs to help him find something.","She's found a new ring.","She's thankful she has a rag."], answer:0},
+ {id:10, part:"Part A", choices:["She ran into another car at the corner.","She ran to her cousin because she's scared.","She unexpectedly met one of her relatives.","Carl was running from place to place."], answer:2},
+ {id:11, part:"Part B", q:"What is mainly being discussed?", choices:["Trash orbiting Earth.","Becoming space scientists.","A trip by an astronaut to the Moon.","The overabundance of garbage on Earth."], answer:3},
+ {id:12, part:"Part B", q:"Where did this talk most likely come from?", choices:["From a lecture.","On a television program.","In a magazine article.","In a book."], answer:1},
+ {id:13, part:"Part B", q:"How much debris is mentioned as orbiting the Earth?", choices:["3,000 tons","3,000 pounds","13,000 pounds","300 tons"], answer:1},
+ {id:14, part:"Part B", q:"What does the speaker predict about this problem?", choices:["The problem will take care of itself.","Scientists will find solutions to the problem.","She will be able to travel in space.","The junk will fall to Earth."], answer:1},
+ {id:15, part:"Part C", q:"When does this talk most likely take place?", choices:["On the first day of class","In the final week of the semester","In the middle of the semester","At the end of class"], answer:0},
+ {id:16, part:"Part C", q:"When is the assignment due?", choices:["In two weeks","In three weeks","Later today","By Friday of this week"], answer:3},
+ {id:17, part:"Part C", q:"What kind of sources are students asked to use?", choices:["Books listed in student journals","Books from outside the library","Both books and journals","Journal and magazine articles"], answer:2},
+ {id:18, part:"Part C", q:"How many sources are students required to use?", choices:["Two","Three","Five","Seven"], answer:3},
 ];
 
-const partB = [
- {group:"Conversation 1", audio:"audio/partB_1.mp3", items:[
-   {id:11, q:"What is Ana's major?", choices:["Statistics","Psychology","Art","Photography"], answer:1},
-   {id:12, q:"What does the advisor recommend?", choices:["Taking two psychology electives","Taking a statistics course and an unrelated elective","Dropping her math requirement","Waiting until next year to choose electives"], answer:1},
-   {id:13, q:"Why does the advisor suggest \"Statistics for Social Sciences\"?", choices:["It has no exams","It doesn't require strong math skills","It is only one credit","It's taught by the psychology department"], answer:1},
-   {id:14, q:"What does Ana decide to do?", choices:["Take two statistics courses","Take statistics and a photography class","Postpone choosing her electives","Change her major"], answer:1},
- ]},
- {group:"Conversation 2", audio:"audio/partB_2.mp3", items:[
-   {id:15, q:"What is Lisa struggling with?", choices:["Writing the introduction","The data analysis section","Formatting the slides","Finding a meeting place"], answer:1},
-   {id:16, q:"What does Tom offer to do?", choices:["Write the introduction","Help with the data analysis","Cancel the meeting","Present alone"], answer:1},
-   {id:17, q:"When will Tom be free to meet?", choices:["Before 3 PM","After 3 PM","In the morning","On the weekend"], answer:1},
-   {id:18, q:"Where will they meet?", choices:["In Tom's dorm","At the library","In a classroom","At Lisa's house"], answer:1},
- ]},
+/* =========================================================
+   DATA — STRUCTURE (45 items)
+========================================================= */
+const structureItems = [
+ {id:19, part:"Part A — Sentence Completion", q:"According to somatotype, a category of human physique, endomorph ____ more muscle than either of the other body types.", choices:["Tended to have","Tends to have","Has tended to have","Had tended to have"], answer:1},
+ {id:20, part:"Part A — Sentence Completion", q:"Although debated by some, since 2012, after the end of third wave of feminism, the fourth one _____ on sexual harassment, body shaming, and rape culture, among other issues of women.", choices:["Focuses","Focused","Has focused","Had focused"], answer:2},
+ {id:21, part:"Part A — Sentence Completion", q:"Gentrification describes a process ____ wealthy, college-educated individuals begin to move into poor or working-class communities, often originally occupied by communities of color.", choices:["When","What","In which","That"], answer:2},
+ {id:22, part:"Part A — Sentence Completion", q:"Most carnivores have relatively large brains, high levels of intelligence, and ____ complicated digestive systems than herbivores.", choices:["Less than","More or less","lesser","less"], answer:3},
+ {id:23, part:"Part A — Sentence Completion", q:"Pythagoras, who is recognized as the world's first mathematician in the year 500 before century, ____ very hard at the arithmetical side of geometry.", choices:["Worked","Works","Has worked","Had worked"], answer:0},
+ {id:24, part:"Part A — Sentence Completion", q:"When Columbus had arrived, he found the New World inhabited by people ____ originally come from the continent of Asia.", choices:["which have","who had","that have","whom had"], answer:1},
+ {id:25, part:"Part A — Sentence Completion", q:"During Covid-19 pandemic, online learning applied by many educational institutions _____ than the conventional one.", choices:["is much effective","is more effective","are more effective","are much more effectively"], answer:1},
+ {id:26, part:"Part A — Sentence Completion", q:"In the United States, the electoral system is either simple or _____ in representation.", choices:["proportional","proportionally","proportion","portion"], answer:0},
+ {id:27, part:"Part A — Sentence Completion", q:"A bad stigma and discrimination target severe _____ people and make them more depressed.", choices:["mental ill","mentally illness","mentally ill","mental illness"], answer:2},
+ {id:28, part:"Part A — Sentence Completion", q:"For years, although it is controversial, meme has been considered pop art using the imagery of mass-media, mass-production and ____.", choices:["Mass-cultural","Mass-culture","Mass-cultured","Mass-culturally"], answer:1},
+ {id:29, part:"Part A — Sentence Completion", q:"In the sea, a dolphin is considered the most intelligent mammal while the blue whale is _____.", choices:["the largest","the most large","larger","more large"], answer:0},
+ {id:30, part:"Part A — Sentence Completion", q:"The use of labor-saving devices in homes, ____, and factories added to the amount of leisure time people had.", choices:["officially","office","to be officially","offices"], answer:3},
+ {id:31, part:"Part A — Sentence Completion", q:"_____, a diamond will glow red, then white due to reaction between the surface of diamond and the air.", choices:["When first heated","When first heating","When heats","When it heats"], answer:0},
+ {id:32, part:"Part A — Sentence Completion", q:"Many renewable resources which emit less carbon dioxide and other greenhouse gases are now found to ____.", choices:["Supporting electricity","Supporting electricities","Support electricity","Support electricities"], answer:2},
+ {id:33, part:"Part A — Sentence Completion", q:"During the pandemic, teachers of special needs students struggle with feelings of helplessness in handling students in one-on-one ____.", choices:["Intensive guidance","Intensively guidance","Intensified guidance","Intensifying guidance"], answer:0},
+ {id:34, part:"Part A — Sentence Completion", q:"The problems of squaring a Pan-European agenda regarding 25 countries union _______ a slow, complex, and divisive process.", choices:["has","have","have had","has had"], answer:1},
+ {id:35, part:"Part A — Sentence Completion", q:"An estimated 30,000 to 40,000 brown bears living in Alaska ______ grizzlies.", choices:["is called","are called","calls","call"], answer:1},
+ {id:36, part:"Part A — Sentence Completion", q:"When a muscle fiber worked intensely, it ____ potassium and dampened the fiber's ability to contract.", choices:["began to lose","begins to lose","has begun to lose","begun to lose"], answer:0},
+ {id:37, part:"Part A — Sentence Completion", q:"The number of girls in school and women in parliaments _____ and improved their overall access to contraception in the past decade.", choices:["has risen","rose","rises","had risen"], answer:1},
+ {id:38, part:"Part A — Sentence Completion", q:"Apple Computer has unveiled its new desktop computer design and _____ all disk drives and processors into a flat display less than two inches thick.", choices:["integrates","integrated","have integrates","integrate"], answer:1},
+ {id:39, part:"Part A — Sentence Completion", q:"Astronomers on Tuesday News _____ the discovery of a new class of planets in which uninhabitable gas giants was previously discovered.", choices:["announce","had announced","announced","have announced"], answer:2},
+ {id:40, part:"Part A — Sentence Completion", q:"For decades, the food industry ________ serving up sugary or fat-laden products promoted with ceaseless advertising.", choices:["has been known","was known","is known","had been known"], answer:0},
+ {id:41, part:"Part A — Sentence Completion", q:"Japan's latitudinal spread, ranging from subtropical in the south to sub-arctic in the north, makes it have ________ of flora and fauna.", choices:["the more widely diversity","the most widely diversity","more widely diversity than","most widely diversity"], answer:1},
+ {id:42, part:"Part A — Sentence Completion", q:"Food is, after all, one of _________ Chinese culture which manage to spread all over the world.", choices:["most important part of","the most important part of","the more important part of","more important part of"], answer:1},
+ {id:43, part:"Part A — Sentence Completion", q:"Across the country, ______ have pointed fingers for decades than commercial fishers especially in dwindling stocks of sports fish.", choices:["more recreational fishers than","the more recreational fishers","the most recreational fishers","more recreational fishers"], answer:3},
+ {id:44, part:"Part B — Error Identification", q:"From all types of natural disaster, (A) only much of them recorded in history (B) is considered deadly (C) for killing many victims. (D)", choices:["only much of them recorded in history","is considered deadly","for killing many victims","(D) — no visible error"], answer:0},
+ {id:45, part:"Part B — Error Identification", q:"(A) Nuclear, because of many environmentalists oppose it, (B) becomes a potential alternative (C) and radically reduces (D) the world's carbon emissions.", choices:["Nuclear, because of many environmentalists oppose it,","becomes a potential alternative","and radically reduces","the world's carbon emissions"], answer:0},
+ {id:46, part:"Part B — Error Identification", q:"(A) Normally done within a week, (B) the national exam for elementary, junior, and senior high school (C) students had been cancelled in March 2020 (D) due to the coronavirus pandemic.", choices:["Normally done within a week,","the national exam for elementary, junior, and senior high school","students had been cancelled in March 2020","due to the coronavirus pandemic"], answer:2},
+ {id:47, part:"Part B — Error Identification", q:"(A) As a part of macronutrients, (B) protein consists of (C) amino acids and its kinds (D) are about twenty.", choices:["As a part of macronutrients,","protein consists of","amino acids and its kinds","are about twenty"], answer:2},
+ {id:48, part:"Part B — Error Identification", q:"Not only can an aircraft (A) able to move around faster than rovers, (B) but also the Mars (C) Helicopter is able to (D) reach areas.", choices:["can an aircraft","able to move around faster than rovers,","Helicopter is able to","reach areas"], answer:3},
+ {id:49, part:"Part B — Error Identification", q:"(A) Fifteen minutes of high-intensity interval training every day (B) is very effective (C) in helping people to maintain (D) physically fitness.", choices:["Fifteen minutes of high-intensity interval training every day","is very effective","in helping people to maintain","physically fitness"], answer:3},
+ {id:50, part:"Part B — Error Identification", q:"(A) Mark Twain, pseudonym of Samuel Langhorne Clemens, (B) born in November 30, 1835, (C) acquired international fame (D) for his travel narratives.", choices:["Mark Twain, pseudonym of Samuel Langhorne Clemens,","born in November 30, 1835,","acquired international fame","for his travel narratives"], answer:1},
+ {id:51, part:"Part B — Error Identification", q:"(A) Finding the results in their database, (B) search engines (C) had been developed since their first launching (D) in 1990.", choices:["Finding the results in their database,","search engines","had been developed since their first launching","in 1990"], answer:2},
+ {id:52, part:"Part B — Error Identification", q:"(A) Indigenous people had lived and depend on the forest (B) to sustain their life until deforestation (C) was done and stopped (D) by the government of nations.", choices:["Indigenous people had lived and depend on the forest","to sustain their life until deforestation","was done and stopped","by the government of nations"], answer:0},
+ {id:53, part:"Part B — Error Identification", q:"(A) The progressive reading methods (B) at this school (C) given credits (D) for the improved test scores.", choices:["The progressive reading methods","at this school","given credits","for the improved test scores"], answer:2},
+ {id:54, part:"Part B — Error Identification", q:"(A) Whether Athens became the permanent home of the Games (B) nor it was relocated to other cities (C) created a bunch of questions (D) especially referring to Greece's achievement in the 2004 Olympics.", choices:["Whether Athens became the permanent home of the Games","nor it was relocated to other cities","created a bunch of questions","especially referring to Greece's achievement in the 2004 Olympics"], answer:1},
+ {id:55, part:"Part B — Error Identification", q:"(A) Ten standard operating and procedures, (B) ranging from having a baby and treating a cataract (C) to undergoing a heart bypass, (D) are discounted by the current national hospital.", choices:["Ten standard operating and procedures,","ranging from having a baby and treating a cataract","to undergoing a heart bypass,","are discounted by the current national hospital"], answer:0},
+ {id:56, part:"Part B — Error Identification", q:"(A) Unsociable as well as long hours shifts (B) possibly takes (C) people toll on health, (D) relationships, and family life.", choices:["Unsociable as well as long hours shifts","possibly takes","people toll on health,","relationships, and family life"], answer:2},
+ {id:57, part:"Part B — Error Identification", q:"(A) Crushed ice is used to cool drinks, (B) applied to swelling injuries, (C) as well as to remove excess heat (D) generated in the tissues.", choices:["Crushed ice is used to cool drinks,","applied to swelling injuries,","as well as to remove excess heat","generated in the tissues"], answer:1},
+ {id:58, part:"Part B — Error Identification", q:"(A) International trade in the world's 20-odd varieties of sturgeon (B) has been promoted by the United Nations (C) in 1998, (D) after a drastic rise in poaching.", choices:["International trade in the world's 20-odd varieties of sturgeon","has been promoted by the United Nations","in 1998,","after a drastic rise in poaching"], answer:1},
+ {id:59, part:"Part B — Error Identification", q:"(A) By far (B) the most noticeable blemishes on the surface of the Sun (C) (D) is sunspots.", choices:["By far","the most noticeable blemishes on the surface of the Sun","(no visible error)","is sunspots"], answer:3},
+ {id:60, part:"Part B — Error Identification", q:"(A) In 1889, the Eiffel Tower, (B) built for the International Exhibition of Paris to commemorate the centenary of the French Revolution, (C) is received acknowledgement (D) world-widely.", choices:["In 1889, the Eiffel Tower,","built for the International Exhibition of Paris to commemorate the centenary of the French Revolution,","is received acknowledgement","world-widely"], answer:2},
+ {id:61, part:"Part B — Error Identification", q:"(A) Parents are poor observers of their child's behavior (B) more than they think it is agreeable, (C) the more the child will refuse (D) to get along with.", choices:["Parents are poor observers of their child's behavior","more than they think it is agreeable,","the more the child will refuse","to get along with"], answer:1},
+ {id:62, part:"Part B — Error Identification", q:"(A) From 2000 the Census showed (B) the gradual declining number of married couples (C) who are willing to have (D) children under their roof after the age of 18 years.", choices:["From 2000 the Census showed","the gradual declining number of married couples","who are willing to have","children under their roof after the age of 18 years"], answer:0},
+ {id:63, part:"Part B — Error Identification", q:"(A) A standard health protocol helps overweight people reduce (B) their risk of heart attacks or need for (C) surgery by 63 percent since the Coronary Artery Bypass Grafting (D) were found.", choices:["A standard health protocol helps overweight people reduce","their risk of heart attacks or need for","surgery by 63 percent since the Coronary Artery Bypass Grafting","were found"], answer:1},
 ];
 
-const partC = [
- {group:"Talk 1", audio:"audio/partC_1.mp3", items:[
-   {id:19, q:"What is the main topic of the talk?", choices:["How to study more effectively","The relationship between sleep and memory","The dangers of all-nighters","How the brain processes information during the day"], answer:1},
-   {id:20, q:"According to the talk, what happens during deep sleep?", choices:["The brain stops working","Memories are erased","The brain strengthens connections formed during the day","Students forget what they studied"], answer:2},
-   {id:21, q:"What does the speaker say about sleep quality versus quantity?", choices:["Only quantity matters","Only quality matters","Both matter, but quality is more effective for consolidation","Neither matters much"], answer:2},
-   {id:22, q:"What does the speaker suggest students do before an exam?", choices:["Study all night","Get a good night's sleep","Skip studying entirely","Take a nap during the day"], answer:1},
- ]},
- {group:"Talk 2", audio:"audio/partC_2.mp3", items:[
-   {id:23, q:"What is the talk mainly about?", choices:["A new dining hall menu","The university's recycling program","A change in dormitory rules","A fundraising event"], answer:1},
-   {id:24, q:"Where will recycling bins be placed?", choices:["Only in dormitories","Only in the library","In every building on campus","Only outdoors"], answer:2},
-   {id:25, q:"What does the Green Campus Committee do?", choices:["Organizes campus tours","Manages student housing","Meets every other Thursday to work on the recycling initiative","Sells recycled products"], answer:2},
-   {id:26, q:"What is the university's goal?", choices:["To build a new recycling plant","To reduce landfill waste by thirty percent in two years","To ban plastic on campus","To open a recycling store"], answer:1},
- ]},
-];
-
-const structureA = [
- {id:27, q:"_____ she was tired, she decided to finish her homework before going to bed.", choices:["Despite","Although","Because of","Unless"], answer:1},
- {id:28, q:"The committee has not yet decided _____ to approve the new policy.", choices:["that","if","whether","what"], answer:2},
- {id:29, q:"By the time the movie started, we _____ our seats for over an hour.", choices:["had","have had","had had","has had"], answer:2},
- {id:30, q:"Neither the students nor the teacher _____ aware of the schedule change.", choices:["were","was","are","is"], answer:1},
- {id:31, q:"The report, _____ was submitted late, contained several errors.", choices:["which","who","whom","whose"], answer:0},
- {id:32, q:"It is essential that every student _____ the safety rules before entering the lab.", choices:["follows","followed","follow","following"], answer:2},
- {id:33, q:"_____ the heavy rain, the outdoor event was cancelled.", choices:["Because","Due to","Even though","Since"], answer:1},
- {id:34, q:"The number of students who apply to this university _____ increased steadily over the past decade.", choices:["have","has","had","having"], answer:1},
- {id:35, q:"She is one of the few students who _____ finished the assignment early.", choices:["has","have","is","was"], answer:1},
- {id:36, q:"_____ hard he tried, he could not solve the last problem on the exam.", choices:["Howsoever","However","Whatever","No matter"], answer:1},
- {id:37, q:"The professor asked the students _____ their essays before the deadline.", choices:["submit","submitted","to submit","submitting"], answer:2},
- {id:38, q:"_____ of the two theories, the second one is more widely accepted.", choices:["Both","Between","Each","All"], answer:1},
- {id:39, q:"Not only _____ the exam difficult, but the room was also too cold.", choices:["was","is","the exam was","it was"], answer:0},
- {id:40, q:"The data _____ collected over three years, shows a clear trend.", choices:["which","that has been","whom","what"], answer:1},
- {id:41, q:"Had the university invested in better facilities, more students _____ have enrolled.", choices:["will","would","can","shall"], answer:1},
-];
-
-const structureB = [
- {id:42, q:"The teacher, along with her students, (A) were (B) preparing for (C) the annual science fair (D) next week.", choices:["(A) were","(B) preparing for","(C) the annual science fair","(D) next week"], answer:0},
- {id:43, q:"Each of the applicants (A) have submitted (B) their resume (C) and cover letter (D) by the deadline.", choices:["(A) have submitted","(B) their resume","(C) and cover letter","(D) by the deadline"], answer:0},
- {id:44, q:"The research team (A) concluded that (B) the results were (C) more significant than (D) they had originally expect.", choices:["(A) concluded that","(B) the results were","(C) more significant than","(D) they had originally expect"], answer:3},
- {id:45, q:"Despite of (A) the difficulties, (B) the students managed to (C) complete the project (D) on time.", choices:["Despite of (A)","(B) the students managed to","(C) complete the project","(D) on time"], answer:0},
- {id:46, q:"She is the only one of the students (A) who (B) always arrive (C) early to (D) class.", choices:["(A) who","(B) always arrive","(C) early to","(D) class"], answer:1},
- {id:47, q:"The company has (A) recently announce that (B) it will be (C) hiring more employees (D) next year.", choices:["(A) recently announce that","(B) it will be","(C) hiring more employees","(D) next year"], answer:0},
- {id:48, q:"Scientists believe (A) that the new vaccine (B) are more effective (C) than the previous one (D) developed last year.", choices:["(A) that the new vaccine","(B) are more effective","(C) than the previous one","(D) developed last year"], answer:1},
- {id:49, q:"By the time she (A) arrives at the airport, (B) the plane will already (C) has departed (D) for its destination.", choices:["(A) arrives at the airport","(B) the plane will already","(C) has departed","(D) for its destination"], answer:2},
- {id:50, q:"The number of students (A) enrolling in online courses (B) have risen dramatically (C) over the last few years (D) due to convenience.", choices:["(A) enrolling in online courses","(B) have risen dramatically","(C) over the last few years","(D) due to convenience"], answer:1},
- {id:51, q:"If I (A) would have known about the meeting, (B) I would have (C) attended it (D) without hesitation.", choices:["(A) would have known about the meeting","(B) I would have","(C) attended it","(D) without hesitation"], answer:0},
- {id:52, q:"The professor requested that (A) each student (B) turns in (C) their assignment (D) before the end of class.", choices:["(A) each student","(B) turns in","(C) their assignment","(D) before the end of class"], answer:1},
- {id:53, q:"Neither of the two proposals (A) were (B) approved by (C) the board of (D) directors.", choices:["(A) were","(B) approved by","(C) the board of","(D) directors"], answer:0},
- {id:54, q:"The library, (A) which contain (B) over a million books, (C) is one of the (D) largest in the country.", choices:["(A) which contain","(B) over a million books","(C) is one of the","(D) largest in the country"], answer:0},
- {id:55, q:"Having finish (A) the report, (B) the manager (C) submitted it (D) to the director immediately.", choices:["Having finish (A)","(B) the manager","(C) submitted it","(D) to the director immediately"], answer:0},
- {id:56, q:"The students were exciting (A) about the field trip (B) planned for (C) next month (D) by the department.", choices:["exciting (A)","(B) planned for","(C) next month","(D) by the department"], answer:0},
-];
-
+/* =========================================================
+   DATA — READING (2 passages, 20 items)
+========================================================= */
 const readingPassages = [
- {title:"The Vital Role of Honeybees", text:`Honeybees are often celebrated for producing honey, but their most important contribution to agriculture is pollination. As bees move from flower to flower collecting nectar, pollen grains stick to their bodies and are transferred between plants, enabling fertilization. It is estimated that roughly one-third of the food humans consume depends, at least in part, on pollinators like bees. Crops such as almonds, apples, and blueberries rely almost entirely on bee pollination to produce fruit. In recent decades, beekeepers have reported alarming declines in honeybee populations, a phenomenon partly attributed to a problem known as colony collapse disorder. Scientists point to several possible causes, including pesticide exposure, habitat loss, and parasites such as the Varroa mite. Because commercial agriculture depends heavily on managed honeybee colonies, many farmers now rent hives from beekeepers during pollination season, transporting them across the country to align with blooming schedules. Researchers and policymakers continue to search for ways to protect bee populations, recognizing that their decline could have serious consequences not just for beekeepers, but for global food security as a whole.`,
+ {title:"Passage 1 — Horse Breeding", text:`Horse owners who plan to breed one or more mares should have a working knowledge of heredity and know how to care for breeding animals and foals. The number of mares bred that conceive varies from about 40 to 85 percent, with the average running less than 50 percent. Some mares that do conceive fail to produce living foals. This means that, on average, two mares are kept a whole year to produce one foal, and even then, some foals are disappointments from the standpoint of quality.
+
+By careful selection, breeders throughout history have developed various kinds of horses with a wide variety of characteristics to suit many different needs. The Great Horse of the Middle Ages, for example, was bred for size and strength to carry a heavily armored knight. The massive horses of such breeds are often called "cold blooded." The Arabs bred lithe desert horses that were small and swift. These animals are often referred to as "hot blooded". Cross-breeding of hot-blooded and cold-blooded horses for certain characteristics produced breeds ranging from riding horses to draft horses.
+
+The Thoroughbred is considered by many to be the highpoint of elegance and fine selective breeding. Many persons mistakenly apply the name Thoroughbred to any purebred horse. But a Thoroughbred is a distinct breed of running horses that traces its ancestry through the male line directly back to three Eastern stallions as the Byerly Turk, the Darley Arabian, and the Godolphin Barb. For convenience the breeds of horses are often divided into three major groups: first is ponies; second is heavy, or draft horses; and the last is light horses.`,
   items:[
-   {id:57, q:"What is the passage mainly about?", choices:["How honey is produced","The importance of bees for pollination","The dangers of pesticides","How to become a beekeeper"], answer:1},
-   {id:58, q:"According to the passage, what percentage of human food depends on pollinators?", choices:["About one-tenth","About one-third","About one-half","Nearly all"], answer:1},
-   {id:59, q:"Which crops are mentioned as depending almost entirely on bee pollination?", choices:["Wheat and rice","Corn and soybeans","Almonds, apples, and blueberries","Potatoes and carrots"], answer:2},
-   {id:60, q:"What is \"colony collapse disorder\"?", choices:["A type of pesticide","A decline in honeybee populations","A farming technique","A disease in humans"], answer:1},
-   {id:61, q:"According to the passage, why do farmers rent hives from beekeepers?", choices:["To produce more honey","To help pollinate their crops","To study bee behavior","To reduce pesticide use"], answer:1},
-   {id:62, q:"The word \"alarming\" in the passage is closest in meaning to", choices:["surprising and pleasant","worrying","unimportant","expected"], answer:1},
-   {id:63, q:"What can be inferred about the future of bee populations?", choices:["It is not a concern for scientists","It could affect global food security","It has no impact on agriculture","It has already been fully resolved"], answer:1},
+   {id:64, q:"What is the passage mainly about?", choices:["Horse breeding","Horse farming","Animal breeders","Breeding knowledge"], answer:0},
+   {id:65, q:"What percent is the average amount of mares bred that conceive?", choices:["about 45%","around 85%","more than 70%","up to 50%"], answer:0},
+   {id:66, q:"The word \"conceive\" in line 3 can be replaced by", choices:["become sick","become pregnant","die","be born"], answer:1},
+   {id:67, q:"Which of the following was NOT owned by the Great Horse of the Middle Ages?", choices:["Large size","Beauty","Strength","Swiftness"], answer:1},
+   {id:68, q:"The word \"These\" in line 9 refers to", choices:["Arabs","Desert horses","Breeds","Animals"], answer:0},
+   {id:69, q:"The word \"highpoint\" in line 12 can be replaced by", choices:["popularity","standard","massiveness","top"], answer:3},
+   {id:70, q:"According to the passage, which of the following horses is known as the finest purebred?", choices:["Darley Arabian","Thoroughbred","Godolphin Barb","Byerly Turk"], answer:1},
+   {id:71, q:"It can be inferred from the passage why the cold-blooded and hot-blooded horses were cross-bred?", choices:["Cross-breeding was a safer means of reproduction.","Cross-bred horses were preferred by Arabs.","By cross-breeding, horses with desirable mixed characteristics could be produced.","Cross-breeding produced Thoroughbred horses."], answer:2},
+   {id:72, q:"What is the origin of the Thoroughbred?", choices:["A male lineage of Eastern stallion.","A direct breed of running horses.","A cross-breed of the Arabs.","A purebred horse."], answer:0},
+   {id:73, q:"Which of the following is NOT one of the major divisions of horse breeds?", choices:["Draft horses.","Ponies.","Foals.","Light horses."], answer:2},
   ]},
- {title:"The Printing Press and the Spread of Knowledge", text:`Before the mid-fifteenth century, books in Europe were copied by hand, a slow and expensive process that limited the spread of information to a small, literate elite. This changed dramatically around 1440, when Johannes Gutenberg developed a printing press using movable metal type. Gutenberg's invention allowed individual letters to be arranged, inked, and pressed onto paper repeatedly, making it possible to produce many copies of a text far more quickly than by hand. Within decades, printing presses spread across Europe, and the cost of books dropped significantly. This had profound effects on society. Ideas could now travel faster and reach a wider audience, contributing to increased literacy rates and the spread of new philosophical and scientific ideas during the Renaissance. Some historians argue that the printing press also played a key role in the Protestant Reformation, since it allowed reformers like Martin Luther to distribute pamphlets criticizing the Catholic Church far more widely than would have been possible before. In many ways, Gutenberg's invention set the stage for the modern information age, demonstrating how a single technological innovation can reshape an entire society.`,
+ {title:"Passage 2 — Archaeology as History", text:`Archaeology is a source of history, not just a humble auxiliary discipline. Archaeological data are historical documents, not mere illustrations to written texts. Just as much as any other historian, an archaeologist studies and tries to reconstitute the process that has created the human world in which we live and us ourselves in so far as we are each creature of our age and social environment. Archaeological data are all changes in the material world resulting from human action, or more succinctly, the fossilized results of human behavior. The sum of these constitutes what may be called the archaeological record, which exhibits certain peculiarities and deficiencies, the consequences of which produce a rather superficial contrast between archaeological history and the more familiar kind based upon written records.
+
+Not all human behavior fossilizes. The words I utter and you hear as vibrations in the air are certainly human changes in the material world and may be of great historical significance. Yet they leave no sort of trace in the archaeological record unless they are captured by a dictaphone or written down by a clerk. The movement of troops on the battlefield may "change the course of history", but this is equally ephemeral from the archaeologist's standpoint. What is perhaps worse, most organic materials are perishable. Everything made of wood, hide, wool, linen, grass, hair, and similar materials will decay and vanish in dust in a few years or centuries, save under very exceptional conditions. In a relatively brief period, the archaeological record is reduced to mere scraps of stone, bone, glass, metal, and earthenware. Still, modern archaeology, by applying appropriate techniques and comparative methods, aided by a few lucky finds from peat bogs, deserts, and frozen soils, can fill up a good deal of the gap.`,
   items:[
-   {id:64, q:"What is the main idea of the passage?", choices:["Johannes Gutenberg was a famous author","The printing press transformed the spread of information in Europe","Books were always cheap to produce","The Protestant Reformation caused the invention of printing"], answer:1},
-   {id:65, q:"Before the printing press, how were books produced?", choices:["By machine","By hand","By using wood blocks only","They were not produced at all"], answer:1},
-   {id:66, q:"What did Gutenberg's invention allow?", choices:["Faster production of many copies of a text","The invention of paper","The translation of the Bible","The abolition of handwriting"], answer:0},
-   {id:67, q:"According to the passage, what effect did cheaper books have on society?", choices:["Fewer people learned to read","Literacy rates increased","Books became rare","Handwriting became more popular"], answer:1},
-   {id:68, q:"What role did the printing press play in the Protestant Reformation, according to some historians?", choices:["It had no role at all","It helped distribute reform pamphlets widely","It was invented by Martin Luther","It was banned by reformers"], answer:1},
-   {id:69, q:"The word \"profound\" in the passage is closest in meaning to", choices:["minor","significant","confusing","temporary"], answer:1},
-   {id:70, q:"What does the passage suggest about technological innovation?", choices:["It rarely affects society","It can reshape an entire society","It only affects the economy","It is always resisted by the public"], answer:1},
-  ]},
- {title:"Urban Heat Islands", text:`Cities are often noticeably warmer than the rural areas surrounding them, a phenomenon known as the urban heat island effect. This occurs because materials commonly used in cities, such as asphalt and concrete, absorb and retain heat more effectively than natural surfaces like grass and trees. During the day, these materials absorb solar radiation, and at night, they slowly release the stored heat back into the air, keeping urban temperatures elevated even after sunset. Additionally, tall buildings can trap heat and reduce airflow, while the widespread use of air conditioning and vehicles adds even more heat to the surrounding environment. The urban heat island effect can raise city temperatures by several degrees compared to nearby rural areas, leading to increased energy consumption for cooling and, in extreme cases, greater risks to public health during heat waves. To reduce this effect, urban planners have proposed several strategies, including increasing green spaces, planting more trees, and using reflective or light-colored materials on roofs and roads that absorb less heat. Some cities have already begun implementing "green roofs," covering buildings with vegetation to both cool the structure and reduce overall urban temperatures.`,
-  items:[
-   {id:71, q:"What is the urban heat island effect?", choices:["A rise in ocean temperatures","Cities being warmer than surrounding rural areas","A type of pollution","A weather pattern only found at night"], answer:1},
-   {id:72, q:"According to the passage, why do cities retain more heat?", choices:["Because of the materials used, such as asphalt and concrete","Because they are located near the ocean","Because they have more trees","Because of higher altitude"], answer:0},
-   {id:73, q:"What happens to the heat absorbed by city materials during the day?", choices:["It disappears immediately","It is released slowly at night","It is absorbed by trees","It causes immediate cooling"], answer:1},
-   {id:74, q:"According to the passage, what contributes to the heat island effect besides building materials?", choices:["Ocean currents","Air conditioning and vehicles","Rainfall patterns","Wind speed"], answer:1},
-   {id:75, q:"What is one consequence of the urban heat island effect mentioned in the passage?", choices:["Decreased energy use","Increased energy consumption for cooling","Lower temperatures at night","Reduced traffic"], answer:1},
-   {id:76, q:"What is a \"green roof,\" according to the passage?", choices:["A roof painted green","A roof covered with vegetation","A type of solar panel","A roof made of recycled plastic"], answer:1},
-   {id:77, q:"The word \"elevated\" in the passage is closest in meaning to", choices:["lowered","raised","removed","stabilized"], answer:1},
+   {id:74, q:"What is the author's main purpose in the passage?", choices:["Pointing out the importance of recent advances in archaeology.","Describing an archaeologist's education.","Explaining how archaeology is a source of history.","Encouraging more people to become archaeologists."], answer:2},
+   {id:75, q:"The word \"discipline\" in line 1 can be best replaced by", choices:["student","course","order","method"], answer:1},
+   {id:76, q:"The word \"it\" in line 7 refers to", choices:["the record","the sum","human behavior","constitute"], answer:0},
+   {id:77, q:"According to the passage, what does the archaeological record consist of?", choices:["spoken words of great historical significance","the fossilized results of human activity","organic materials","ephemeral ideas"], answer:1},
+   {id:78, q:"The word \"they\" in line 12 refers to", choices:["scraps","words","troops","humans"], answer:1},
+   {id:79, q:"In line 13, the phrase \"change the course of history\" can be considered as", choices:["a cause of different story in the past","a reference of certain history","a change in related history","a matter of history course"], answer:2},
+   {id:80, q:"Which of the following is NOT mentioned as an example of an organic material?", choices:["stone","wool","grass","hair"], answer:0},
+   {id:81, q:"The author mentions all the following archaeological discovery sites EXCEPT", choices:["urban areas","peat bogs","very hot and dry lands","earth that has been frozen"], answer:0},
+   {id:82, q:"The word \"mere\" in line 17 can be best replaced by", choices:["simple","unimportant","pure","little"], answer:3},
+   {id:83, q:"The paragraph following the passage most probably discusses", choices:["techniques for recording oral histories","certain battlefield excavation methods","some specific archaeological discoveries","building materials of the nineteenth and twentieth centuries"], answer:2},
   ]},
 ];
 
 /* =========================================================
-   BUILD FLAT ITEM LIST
+   BUILD FLAT ITEM LIST (Structure + Reading only — Listening handled separately)
 ========================================================= */
 let items = [];
-partA.forEach(it => items.push({section:"Listening", part:"Part A — Short Conversations", audio:it.audio, group:null, id:it.id, q:it.q, choices:it.choices, answer:it.answer}));
-partB.forEach(g => g.items.forEach((it,i) => items.push({section:"Listening", part:"Part B — "+g.group, audio: i===0? g.audio : null, groupAudio:g.audio, id:it.id, q:it.q, choices:it.choices, answer:it.answer})));
-partC.forEach(g => g.items.forEach((it,i) => items.push({section:"Listening", part:"Part C — "+g.group, audio: i===0? g.audio : null, groupAudio:g.audio, id:it.id, q:it.q, choices:it.choices, answer:it.answer})));
-structureA.forEach(it => items.push({section:"Structure", part:"Part A — Sentence Completion", id:it.id, q:it.q, choices:it.choices, answer:it.answer}));
-structureB.forEach(it => items.push({section:"Structure", part:"Part B — Error Identification", id:it.id, q:it.q, choices:it.choices, answer:it.answer, isError:true}));
+structureItems.forEach(it => items.push({section:"Structure", part:it.part, id:it.id, q:it.q, choices:it.choices, answer:it.answer}));
 readingPassages.forEach((p) => p.items.forEach(it => items.push({section:"Reading", part:p.title, passage:p.text, passageTitle:p.title, id:it.id, q:it.q, choices:it.choices, answer:it.answer})));
 
 /* =========================================================
@@ -241,9 +236,9 @@ let state = {
   participant: {name:"", id:""},
   idx: 0,
   answers: {},
-  playedAudio: {},
+  listeningPlayed: false,
+  listeningStarted: false,
   sectionStart: {},
-  timers: {},
 };
 
 const app = document.getElementById("app");
@@ -253,12 +248,8 @@ function fmtTime(s){
   const m = Math.floor(s/60), sec = s%60;
   return m+":"+String(sec).padStart(2,"0");
 }
-
 function currentSection(){ return items[state.idx] ? items[state.idx].section : null; }
-
-function sectionIndices(sec){
-  return items.map((it,i)=>({it,i})).filter(x=>x.it.section===sec).map(x=>x.i);
-}
+function sectionIndices(sec){ return items.map((it,i)=>({it,i})).filter(x=>x.it.section===sec).map(x=>x.i); }
 
 /* =========================================================
    RENDER: START SCREEN
@@ -268,7 +259,7 @@ function renderStart(){
     <div class="card">
       <h1>TOEFL Practice Test</h1>
       <p class="muted">Listening Comprehension • Structure and Written Expression • Reading Comprehension</p>
-      <p>Tes ini terdiri dari 3 bagian: Listening (26 soal), Structure (30 soal), dan Reading (21 soal). Audio listening hanya dapat diputar satu kali. Pastikan koneksi internet stabil dan gunakan headphone untuk bagian listening.</p>
+      <p>Tes ini terdiri dari 3 bagian: Listening (18 soal, audio diputar sekali), Structure (45 soal), dan Reading (20 soal, 2 passage). Gunakan headphone untuk bagian listening dan pastikan koneksi internet stabil.</p>
       <label for="pname" style="font-size:14px; font-weight:600;">Nama lengkap</label>
       <input type="text" id="pname" placeholder="Nama sesuai KTP/kartu peserta">
       <label for="pid" style="font-size:14px; font-weight:600;">Nomor peserta / NIM</label>
@@ -284,51 +275,114 @@ function renderStart(){
     const id = document.getElementById("pid").value.trim();
     if(!name || !id){ document.getElementById("startErr").style.display="block"; return; }
     state.participant = {name, id};
-    state.screen = "test";
-    state.idx = 0;
-    state.sectionStart[currentSection()] = Date.now();
+    state.screen = "listening";
     render();
   };
 }
 
 /* =========================================================
-   AUDIO PLAYER COMPONENT
+   RENDER: LISTENING SCREEN (single continuous audio)
 ========================================================= */
-let audioEl = null;
-function renderAudioBox(src, key){
-  const played = !!state.playedAudio[key];
-  return `
-    <div class="audio-box">
-      <button class="play-btn" id="playBtn" ${played?"disabled":""}>${played?'<i>✓</i>':'▶'}</button>
-      <div style="flex:1;">
-        <div class="audio-meta">${played ? "Audio telah diputar — tidak dapat diulang" : "Klik untuk memutar audio (hanya 1 kali)"}</div>
-        <div class="audio-progress"><div class="audio-progress-fill" id="audioFill"></div></div>
-      </div>
+let listenAudioEl = null;
+function renderListening(){
+  const played = state.listeningPlayed;
+  const started = state.listeningStarted;
+
+  const groupsHtml = (() => {
+    let html = "";
+    let lastPart = null;
+    listeningItems.forEach(it => {
+      if(it.part !== lastPart){
+        html += `<div class="listen-part-label">${it.part}</div>`;
+        lastPart = it.part;
+      }
+      const selected = state.answers[it.id];
+      html += `
+        <div class="listen-item">
+          <div class="qnum">Soal No. ${it.id}</div>
+          ${it.q ? `<div class="stem">${it.q}</div>` : ""}
+          <div>
+            ${it.choices.map((c,i)=>`
+              <label class="choice ${selected===i?'selected':''}">
+                <input type="radio" name="lq_${it.id}" value="${i}" ${selected===i?"checked":""}>
+                <span>${String.fromCharCode(65+i)}. ${c}</span>
+              </label>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    });
+    return html;
+  })();
+
+  app.innerHTML = `
+    <div class="topbar">
+      <div><div class="label">Section 1</div><div class="section-name">Listening Comprehension</div></div>
+      <div class="timer">${listeningItems.length} soal</div>
     </div>
+    <div class="card">
+      <p class="instructions">Audio akan diputar SATU KALI dari awal sampai akhir (durasi ± 10 menit). Anda tidak dapat menjeda atau mengulang. Dengarkan baik-baik dan jawab semua soal di bawah selama audio diputar.</p>
+      <div class="audio-box">
+        <button class="play-btn" id="playBtn" ${started?"disabled":""}>${played?"✓":"▶"}</button>
+        <div style="flex:1;">
+          <div class="audio-meta">${played ? "Audio selesai diputar." : (started ? "Sedang diputar — dengarkan baik-baik." : "Klik untuk memulai audio listening (hanya 1 kali).")}</div>
+          <div class="audio-progress"><div class="audio-progress-fill" id="audioFill"></div></div>
+          <div class="audio-time" id="audioTime">0:00 / 0:00</div>
+        </div>
+      </div>
+      ${groupsHtml}
+    </div>
+    <div class="navrow" style="justify-content:flex-end;">
+      <button class="btn-primary" id="nextBtn" ${played?"":"disabled"}>Lanjut ke Structure →</button>
+    </div>
+    ${played ? "" : `<p class="muted" style="text-align:center;">Tombol lanjut akan aktif setelah audio selesai diputar.</p>`}
   `;
-}
-function wireAudio(src, key){
-  const btn = document.getElementById("playBtn");
+
+  document.querySelectorAll('input[type=radio][name^="lq_"]').forEach(radio=>{
+    radio.onchange = (e)=>{
+      const qid = parseInt(e.target.name.split("_")[1]);
+      state.answers[qid] = parseInt(e.target.value);
+      const container = e.target.closest(".listen-item");
+      container.querySelectorAll(".choice").forEach(c=>c.classList.remove("selected"));
+      e.target.closest(".choice").classList.add("selected");
+    };
+  });
+
+  const playBtn = document.getElementById("playBtn");
   const fill = document.getElementById("audioFill");
-  if(!btn || state.playedAudio[key]) return;
-  btn.onclick = () => {
-    if(audioEl){ audioEl.pause(); }
-    audioEl = new Audio(src);
-    btn.disabled = true;
-    audioEl.play();
-    audioEl.ontimeupdate = () => {
-      if(audioEl.duration) fill.style.width = (audioEl.currentTime/audioEl.duration*100)+"%";
+  const timeDisp = document.getElementById("audioTime");
+  if(!started){
+    playBtn.onclick = () => {
+      state.listeningStarted = true;
+      listenAudioEl = new Audio(LISTENING_AUDIO);
+      playBtn.disabled = true;
+      const metaEl = document.querySelector(".audio-meta");
+      if(metaEl) metaEl.textContent = "Sedang diputar — dengarkan baik-baik.";
+      listenAudioEl.play();
+      listenAudioEl.ontimeupdate = () => {
+        if(listenAudioEl.duration){
+          fill.style.width = (listenAudioEl.currentTime/listenAudioEl.duration*100)+"%";
+          timeDisp.textContent = fmtTime(listenAudioEl.currentTime)+" / "+fmtTime(listenAudioEl.duration);
+        }
+      };
+      listenAudioEl.onended = () => {
+        state.listeningPlayed = true;
+        render();
+      };
     };
-    audioEl.onended = () => {
-      state.playedAudio[key] = true;
-      fill.style.width = "100%";
-      renderQuestion();
-    };
+  }
+
+  document.getElementById("nextBtn").onclick = () => {
+    if(!state.listeningPlayed) return;
+    state.screen = "test";
+    state.idx = 0;
+    state.sectionStart["Structure"] = Date.now();
+    render();
   };
 }
 
 /* =========================================================
-   RENDER: TEST QUESTION
+   RENDER: TEST QUESTION (Structure / Reading — paginated + timed)
 ========================================================= */
 function renderQuestion(){
   const it = items[state.idx];
@@ -336,28 +390,15 @@ function renderQuestion(){
   const secIdxs = sectionIndices(sec);
   const posInSec = secIdxs.indexOf(state.idx)+1;
 
-  let timerHtml = "";
-  if(sec !== "Listening"){
-    const total = SECTION_TIME[sec.toLowerCase()];
-    const elapsed = (Date.now() - state.sectionStart[sec])/1000;
-    const remain = total - elapsed;
-    const warn = remain < 120;
-    timerHtml = `<div class="timer ${warn?'warn':''}" id="timerDisplay">${fmtTime(remain)}</div>`;
-  } else {
-    timerHtml = `<div class="timer">Soal ${posInSec} / ${secIdxs.length}</div>`;
-  }
-
-  let audioHtml = "";
-  const audioKey = it.groupAudio || it.audio;
-  if(it.audio && !it.groupAudio){
-    audioHtml = renderAudioBox(it.audio, "single_"+it.id);
-  } else if(it.groupAudio){
-    audioHtml = renderAudioBox(it.groupAudio, "group_"+it.part);
-  }
+  const total = SECTION_TIME[sec.toLowerCase()];
+  const elapsed = (Date.now() - state.sectionStart[sec])/1000;
+  const remain = total - elapsed;
+  const warn = remain < 120;
+  const timerHtml = `<div class="timer ${warn?'warn':''}" id="timerDisplay">${fmtTime(remain)}</div>`;
 
   let passageHtml = "";
   if(it.passage){
-    passageHtml = `<div class="passage"><h4>${it.passageTitle}</h4><div>${it.passage}</div></div>`;
+    passageHtml = `<div class="passage"><h4>${it.passageTitle}</h4><div>${it.passage.replace(/\n\n/g,"<br><br>")}</div></div>`;
   }
 
   const selected = state.answers[it.id];
@@ -369,17 +410,14 @@ function renderQuestion(){
   `).join("");
 
   const isLastOverall = state.idx === items.length-1;
-  const canReplay = it.audio || it.groupAudio;
-  const audioBlocking = false; // navigation not blocked by audio, matches practical use
 
   app.innerHTML = `
     <div class="topbar">
-      <div><div class="label">${it.section}</div><div class="section-name">${it.part}</div></div>
+      <div><div class="label">${it.section} • Soal ${posInSec}/${secIdxs.length}</div><div class="section-name">${it.part}</div></div>
       ${timerHtml}
     </div>
     <div class="card">
       ${passageHtml}
-      ${audioHtml}
       <div class="qnum">Soal No. ${it.id}</div>
       <div class="stem">${it.q}</div>
       <div id="choicesWrap">${choicesHtml}</div>
@@ -392,8 +430,6 @@ function renderQuestion(){
       ${secIdxs.map(i => `<button data-jump="${i}" class="${i===state.idx?'current':(state.answers[items[i].id]!==undefined?'answered':'')}">${items[i].id}</button>`).join("")}
     </div>
   `;
-
-  if(audioKey) wireAudio(it.audio || it.groupAudio, it.groupAudio ? "group_"+it.part : "single_"+it.id);
 
   document.querySelectorAll('input[name="choice"]').forEach(radio=>{
     radio.onchange = (e)=>{
@@ -408,9 +444,7 @@ function renderQuestion(){
     const nextIdx = state.idx+1;
     if(nextIdx < items.length){
       const nextSec = items[nextIdx].section;
-      if(nextSec !== sec){
-        state.sectionStart[nextSec] = Date.now();
-      }
+      if(nextSec !== sec) state.sectionStart[nextSec] = Date.now();
       state.idx = nextIdx;
       render();
     } else {
@@ -421,9 +455,7 @@ function renderQuestion(){
     b.onclick = ()=>{ state.idx = parseInt(b.dataset.jump); render(); };
   });
 
-  if(sec !== "Listening"){
-    startSectionTimerTick(sec);
-  }
+  startSectionTimerTick(sec);
 }
 
 let tickInterval = null;
@@ -461,6 +493,10 @@ function advanceToNextSectionOrFinish(sec){
 ========================================================= */
 function computeScore(){
   const bySec = {Listening:{correct:0,total:0}, Structure:{correct:0,total:0}, Reading:{correct:0,total:0}};
+  listeningItems.forEach(it=>{
+    bySec.Listening.total++;
+    if(state.answers[it.id] === it.answer) bySec.Listening.correct++;
+  });
   items.forEach(it=>{
     bySec[it.section].total++;
     if(state.answers[it.id] === it.answer) bySec[it.section].correct++;
@@ -473,7 +509,7 @@ async function finishTest(){
   state.screen = "done";
   const scores = computeScore();
   const total = scores.Listening.correct + scores.Structure.correct + scores.Reading.correct;
-  const totalQ = items.length;
+  const totalQ = listeningItems.length + items.length;
 
   const payload = {
     name: state.participant.name,
@@ -511,7 +547,7 @@ async function finishTest(){
       ${RESULTS_WEBHOOK_URL
         ? (sent ? `<div class="ok-box">Hasil berhasil dikirim ke sistem penyelenggara.</div>`
                 : `<div class="warn-box">Gagal mengirim hasil otomatis. Silakan unduh hasil di bawah dan kirimkan manual ke penyelenggara.</div>`)
-        : `<div class="warn-box">Pengiriman otomatis belum diaktifkan oleh penyelenggara. Silakan unduh hasil di bawah dan kirimkan ke penyelenggara.</div>`
+        : `<div class="warn-box">Pengiriman otomatis belum diaktifkan. Silakan unduh hasil di bawah.</div>`
       }
       <div class="navrow" style="justify-content:center; margin-top:20px;">
         <button class="btn-primary" id="downloadBtn">Unduh hasil (JSON)</button>
@@ -532,6 +568,7 @@ async function finishTest(){
 ========================================================= */
 function render(){
   if(state.screen === "start") renderStart();
+  else if(state.screen === "listening") renderListening();
   else if(state.screen === "test") renderQuestion();
 }
 
