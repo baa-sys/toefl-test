@@ -504,12 +504,24 @@ function computeScore(){
   return bySec;
 }
 
+function estimateScaledScore(correct, total, maxScale){
+  if(total === 0) return 31;
+  const pct = correct/total;
+  const scaled = 31 + pct*(maxScale-31);
+  return Math.round(scaled);
+}
+
 async function finishTest(){
   if(tickInterval) clearInterval(tickInterval);
   state.screen = "done";
   const scores = computeScore();
   const total = scores.Listening.correct + scores.Structure.correct + scores.Reading.correct;
   const totalQ = listeningItems.length + items.length;
+
+  const listeningScaled = estimateScaledScore(scores.Listening.correct, scores.Listening.total, 68);
+  const structureScaled = estimateScaledScore(scores.Structure.correct, scores.Structure.total, 68);
+  const readingScaled = estimateScaledScore(scores.Reading.correct, scores.Reading.total, 67);
+  const estimatedTotal = Math.round((listeningScaled + structureScaled + readingScaled) * 10 / 3);
 
   const payload = {
     name: state.participant.name,
@@ -519,6 +531,10 @@ async function finishTest(){
     structureScore: scores.Structure.correct, structureTotal: scores.Structure.total,
     readingScore: scores.Reading.correct, readingTotal: scores.Reading.total,
     totalScore: total, totalQuestions: totalQ,
+    listeningScaledEst: listeningScaled,
+    structureScaledEst: structureScaled,
+    readingScaledEst: readingScaled,
+    estimatedToeflTotal: estimatedTotal,
     answers: state.answers,
   };
 
@@ -543,7 +559,19 @@ async function finishTest(){
         <div class="score-cell"><div class="num">${scores.Structure.correct}/${scores.Structure.total}</div><div class="lbl">Structure</div></div>
         <div class="score-cell"><div class="num">${scores.Reading.correct}/${scores.Reading.total}</div><div class="lbl">Reading</div></div>
       </div>
-      <p style="text-align:center; font-size:18px; font-weight:700;">Total: ${total} / ${totalQ}</p>
+      <p style="text-align:center; font-size:14px; color:var(--ink-soft);">Jawaban benar: ${total} / ${totalQ}</p>
+
+      <div style="border-top:1px solid var(--line); margin:18px 0; padding-top:18px;">
+        <p style="font-size:13px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; margin-bottom:12px;">Estimasi Skor Skala TOEFL ITP</p>
+        <div class="score-grid">
+          <div class="score-cell"><div class="num">${listeningScaled}</div><div class="lbl">Listening (31–68)</div></div>
+          <div class="score-cell"><div class="num">${structureScaled}</div><div class="lbl">Structure (31–68)</div></div>
+          <div class="score-cell"><div class="num">${readingScaled}</div><div class="lbl">Reading (31–67)</div></div>
+        </div>
+        <p style="text-align:center; font-size:22px; font-weight:700; color:var(--accent);">Estimasi Total: ${estimatedTotal}</p>
+        <p style="font-size:12px; color:var(--ink-soft); text-align:center; font-style:italic;">Ini estimasi berdasarkan proporsi jawaban benar, BUKAN skor resmi ETS. Skor TOEFL ITP asli dihitung ETS memakai kalibrasi statistik tingkat kesulitan soal yang tidak dipublikasikan.</p>
+      </div>
+
       ${RESULTS_WEBHOOK_URL
         ? (sent ? `<div class="ok-box">Hasil berhasil dikirim ke sistem penyelenggara.</div>`
                 : `<div class="warn-box">Gagal mengirim hasil otomatis. Silakan unduh hasil di bawah dan kirimkan manual ke penyelenggara.</div>`)
