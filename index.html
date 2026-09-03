@@ -260,23 +260,51 @@ function renderStart(){
       <h1>TOEFL Practice Test</h1>
       <p class="muted">Listening Comprehension • Structure and Written Expression • Reading Comprehension</p>
       <p>Tes ini terdiri dari 3 bagian: Listening (18 soal, audio diputar sekali), Structure (45 soal), dan Reading (20 soal, 2 passage). Gunakan headphone untuk bagian listening dan pastikan koneksi internet stabil.</p>
-      <label for="pname" style="font-size:14px; font-weight:600;">Nama lengkap</label>
-      <input type="text" id="pname" placeholder="Nama sesuai KTP/kartu peserta">
-      <label for="pid" style="font-size:14px; font-weight:600;">Nomor peserta / NIM</label>
-      <input type="text" id="pid" placeholder="Nomor peserta">
-      <div id="startErr" class="warn-box" style="display:none;">Isi nama dan nomor peserta terlebih dahulu.</div>
+      <label for="pnim" style="font-size:14px; font-weight:600;">NIM / Nomor Peserta</label>
+      <input type="text" id="pnim" placeholder="Masukkan NIM">
+      <label for="ppass" style="font-size:14px; font-weight:600;">Password</label>
+      <input type="password" id="ppass" placeholder="Masukkan password">
+      <div id="startErr" class="warn-box" style="display:none;"></div>
       <div class="navrow" style="justify-content:flex-end;">
-        <button class="btn-primary" id="startBtn">Mulai tes →</button>
+        <button class="btn-primary" id="startBtn">Login & mulai tes →</button>
       </div>
     </div>
   `;
-  document.getElementById("startBtn").onclick = () => {
-    const name = document.getElementById("pname").value.trim();
-    const id = document.getElementById("pid").value.trim();
-    if(!name || !id){ document.getElementById("startErr").style.display="block"; return; }
-    state.participant = {name, id};
-    state.screen = "listening";
-    render();
+  document.getElementById("startBtn").onclick = async () => {
+    const nim = document.getElementById("pnim").value.trim();
+    const pass = document.getElementById("ppass").value.trim();
+    const errBox = document.getElementById("startErr");
+    errBox.style.display = "none";
+    if(!nim || !pass){
+      errBox.textContent = "Isi NIM dan password terlebih dahulu.";
+      errBox.style.display = "block";
+      return;
+    }
+    const btn = document.getElementById("startBtn");
+    btn.disabled = true;
+    btn.textContent = "Memeriksa...";
+    try{
+      const res = await fetch(RESULTS_WEBHOOK_URL, {
+        method:"POST",
+        body: JSON.stringify({ action:"login", nim, password: pass })
+      });
+      const result = await res.json();
+      if(result.valid){
+        state.participant = {name: result.name, id: result.nim || nim};
+        state.screen = "listening";
+        render();
+      } else {
+        errBox.textContent = "NIM atau password salah, atau belum terdaftar. Hubungi panitia jika ini keliru.";
+        errBox.style.display = "block";
+        btn.disabled = false;
+        btn.textContent = "Login & mulai tes →";
+      }
+    } catch(e){
+      errBox.textContent = "Gagal terhubung ke server. Periksa koneksi internet lalu coba lagi.";
+      errBox.style.display = "block";
+      btn.disabled = false;
+      btn.textContent = "Login & mulai tes →";
+    }
   };
 }
 
@@ -541,12 +569,12 @@ async function finishTest(){
   let sent = false;
   if(RESULTS_WEBHOOK_URL){
     try{
-      await fetch(RESULTS_WEBHOOK_URL, {
-        method:"POST", mode:"no-cors",
-        headers:{"Content-Type":"application/json"},
+      const res = await fetch(RESULTS_WEBHOOK_URL, {
+        method:"POST",
         body: JSON.stringify(payload)
       });
-      sent = true;
+      const result = await res.json();
+      sent = result && result.status === "ok";
     } catch(e){ sent = false; }
   }
 
